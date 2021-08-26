@@ -1,4 +1,6 @@
 *.log
+*.jpg
+*.REMOVE_ME
 /config
 
 google_creds.json

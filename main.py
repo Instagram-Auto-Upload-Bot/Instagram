@@ -1,5 +1,7 @@
 #google sheet key: 13V9PNOB6ZfVIdO-G3XNnrgfQqB88P4OpObxQqomrf3k
 import gspread
+from functions import IG_creds
+import formats
 from gspread.utils import A1_ADDR_ROW_COL_RE
 import gspread_formatting as gsfm
 from  photo import photo_gen, ratio
@@ -9,33 +11,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 from instabot import Bot
 
 
-class ig_creds:
-    username = ""
-    password = ""
-
-#Setup
-#Add things to the cookies json
-cookie_json = open(
-        "config\info.wtsmcsecret@gmail.com_uuid_and_cookie.json", "r+")
-json_object = json.load(cookie_json)
-json_object["cookie"]["ds_user"] = "info.wtsmcsecret@gmail.com"
-json_object["cookie"]["urlgen"] = "https://www.instagram.com/"
-cookie_json.close()
-
-cookie_json = open(
-        "config\info.wtsmcsecret@gmail.com_uuid_and_cookie.json", "w+")
-json.dump(json_object, cookie_json)
-cookie_json.close()
-
-#Read credentials from IG json
-ig_json = open("ig_creds.json", "r")
-json_object = json.load(ig_json)
-
-ig_creds.username = json_object["username"]
-ig_creds.password = json_object["password"]
-ig_json.close()
-
-
 #Google sheet init
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets",
              "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
@@ -43,8 +18,12 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_name("google_creds.json", scope)
 client = gspread.authorize(creds)
 
-#IG bot init
+#IG bot/ credential class init
 bot = Bot()
+ig_creds = IG_creds()
+
+bot.login(username=ig_creds.username, password=ig_creds.password)
+print(bot.username)
 
 #Main
 sheet = client.open("Post responses").sheet1
@@ -61,34 +40,42 @@ class p:
 
 while True:
     try:
+    
         p.ratio = sheet.acell(f"I{a}").value.split(" ")[0]
         p.string = sheet.acell(f"E{a}").value
-        p.caption = sheet.acell(f"F{a}").value if sheet.acell(f"F{a}").value == None else ""
+        p.caption = " " if sheet.acell(
+            f"F{a}").value == None else sheet.acell(f"F{a}").value
         p.bgcolour = sheet.acell(f"G{a}").value.split("(")[-1][:-1]
         p.tcolour = sheet.acell(f"H{a}").value.split("(")[-1][:-1]
-        p.forma = gsfm.functions.get_user_entered_format(sheet, f"K{a}").backgroundColorStyle.rgbColor
+        p.forma = gsfm.functions.get_user_entered_format(sheet, f"K{a}")
 
-        print(p.forma)
+    
+        print(p.forma.backgroundColor)
+        print(formats.bg_styles.green)
+        print(p.caption)
 
-
-        if p.forma.alpha == 1.0:
+        if p.forma.backgroundColor == formats.bg_styles.black.backgroundColor:
             pass
-        elif p.forma.red == 1.0:
+        elif p.forma.backgroundColor == formats.bg_styles.red.backgroundColor:
             pass
-        elif p.forma.green == 1.0:
+        elif p.forma.backgroundColor == formats.bg_styles.green.backgroundColor:
+            print("yes")
             photo_gen(ratio=ratio.ratios[p.ratio], tcolour=p.tcolour, bgcolour=p.bgcolour, string=p.string)
+            gsfm.functions.format_cell_range(sheet, f"K{a}", formats.bg_styles.black)
+            bot.upload_photo("output.jpg", caption=p.caption)
 
-
-
-    except AttributeError:
+    except AttributeError as error:
         print("out")
+        raise(error)
         break
-    
-    
-    a += 1
+
+    except Exception as error:
+        raise(error)
+
     print(a)
+    a += 1
+    
 
-print(p.forma)
-#bot.login(username="info.wtsmcsecret@gmail.com", password="ahPT~y?{@g:W8bBS")
 
-#bot.upload_photo(photo="output.jpg", caption="Test.")
+
+
