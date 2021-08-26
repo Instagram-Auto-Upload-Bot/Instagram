@@ -1,2 +1,2 @@
-# WTSMC-secret
- Private repo.
+# Bot
+MD will be finished later
